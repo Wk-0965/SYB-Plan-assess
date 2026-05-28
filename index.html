@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>创业计划书评审表 - 学员信息同步</title>
+    <!-- SheetJS 解析 Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #eef2f7;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px 16px 40px 16px;
+            color: #1e2a3e;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            padding: 20px 18px 28px 18px;
+        }
+
+        h1 {
+            font-size: 1.65rem;
+            font-weight: 700;
+            margin: 0 0 6px 0;
+            color: #0f2b3d;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sub {
+            color: #5b6e8c;
+            border-left: 3px solid #3b82f6;
+            padding-left: 12px;
+            margin: 8px 0 20px 0;
+            font-size: 0.78rem;
+            font-weight: 400;
+        }
+
+        /* 评审表格区域 */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 0 -6px;
+            border-radius: 20px;
+            width: 100%;
+        }
+        .review-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            min-width: 760px;
+            background: white;
+            table-layout: fixed;
+        }
+        .review-table th:nth-child(1) { width: 55px; }
+        .review-table th:nth-child(2) { width: 115px; }
+        .review-table th:nth-child(3) { width: 280px; }
+        .review-table th:nth-child(4) { width: 80px; }
+        .review-table th:nth-child(5) { width: 200px; }
+        .review-table th {
+            background: #f1f6fd;
+            padding: 14px 6px;
+            border: 1px solid #dee4ec;
+            text-align: center;
+        }
+        .review-table td {
+            border: 1px solid #e2e8f0;
+            padding: 12px 6px;
+            vertical-align: middle;
+        }
+        .col-seq { text-align: center; font-weight: 700; background-color: #fef9e6; }
+        .col-name { font-weight: 700; background-color: #faf5eb; text-align: center; white-space: nowrap; }
+        .options-cell { padding: 6px 4px; }
+        .option-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+        .option-row {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px dashed #e9edf2;
+            padding-bottom: 5px;
+            margin-bottom: 3px;
+            min-height: 36px;
+        }
+        .option-row:last-child { border-bottom: none; }
+        .option-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #f2f4f8;
+            padding: 4px 10px;
+            border-radius: 40px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .option-item.selected { background: #d9e8ff; border-color: #2c6e9e; }
+        .option-item input { margin: 0; accent-color: #1e5a8a; width: 14px; height: 14px; cursor: pointer; }
+        .option-item label { font-size: 0.7rem; cursor: pointer; font-weight: 500; }
+        .score-cell { text-align: center; font-weight: 800; background-color: #fef3e2; white-space: nowrap; }
+        .comment-cell { background-color: #fefcf5; font-size: 0.72rem; line-height: 1.4; word-break: break-word; }
+
+        /* 自动评分 + 学员导入切换区域（位于表格下方、评语上方） */
+        .score-student-panel {
+            background: linear-gradient(135deg, #f8fafd 0%, #f1f6fc 100%);
+            border-radius: 28px;
+            padding: 20px 24px;
+            margin: 24px 0 20px 0;
+            border: 1px solid #dce5f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .score-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .score-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .total-score-card {
+            background: #1e3a5f;
+            border-radius: 60px;
+            padding: 6px 28px;
+            color: white;
+            font-weight: 800;
+            font-size: 1.7rem;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .total-score-card span:first-child {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .grade-badge {
+            background: #cfdfed;
+            padding: 6px 28px;
+            border-radius: 60px;
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: #1e3a5f;
+            min-width: 120px;
+            text-align: center;
+        }
+        .grade-excellent { background: #2b9348; color: white; }
+        .grade-qualified { background: #e9b35f; color: #2d2b1f; }
+        .grade-fail { background: #bc4742; color: white; }
+
+        .student-section {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+        }
+        .student-info-card {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+            background: white;
+            padding: 8px 20px;
+            border-radius: 60px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .student-field {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e5a7a;
+        }
+        .student-field .label {
+            font-weight: 700;
+            color: #2c5a7a;
+        }
+        .student-field .value {
+            font-weight: 600;
+            color: #0f3b5c;
+            background: #eef3fc;
+            padding: 2px 12px;
+            border-radius: 40px;
+        }
+        .student-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 6px 18px;
+            border-radius: 40px;
+        }
+        .student-selector label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #2c5a7a;
+        }
+        #studentSerialSelect {
+            background: #f8fafc;
+            border: 1px solid #cbdbe0;
+            border-radius: 40px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+        }
+        .upload-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .upload-btn {
+            background: #2c6e9e;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .clear-student {
+            background: #e2e8f0;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .file-name {
+            font-size: 0.7rem;
+            color: #5b6e8c;
+        }
+
+        .btn-reset-full {
+            background: white;
+            border: 1px solid #bdcbe0;
+            padding: 8px 28px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-reset-full:hover {
+            background: #f1f5f9;
+        }
+
+        /* 综合评语区域 */
+        .comments-box {
+            background: #fef7e0;
+            border-radius: 24px;
+            padding: 16px 20px;
+            margin-top: 8px;
+            border-left: 5px solid #f4a261;
+        }
+        .comments-title {
+            font-weight: 800;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            color: #7b4a2e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.74rem;
+            color: #3a5c7c;
+        }
+        .comment-item {
+            border-bottom: 1px dashed #f0e1b9;
+            padding: 6px 0;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.65rem;
+            color: #7b8a9b;
+        }
+
+        @media (max-width: 860px) {
+            .score-row { flex-direction: column; align-items: stretch; }
+            .student-section { flex-direction: column; align-items: stretch; }
+            .student-info-card { justify-content: space-between; }
+            .upload-control { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📋 创业计划书评审表</h1>
+    <div class="sub">每个维度二选一 · 自动评分 · 支持Excel名单导入与学员切换</div>
+
+    <!-- 评审表格（每个维度二选一） -->
+    <div class="table-wrapper">
+        <table class="review-table" id="reviewTable">
+            <thead>
+                <tr><th>序号</th><th>考核项</th><th>创业计划书评审选项（每组二选一）</th><th>各项评分</th><th>评语</th></tr>
+                <tr style="background:#f7faff;"><th></th><th></th><th>✔ 请勾选对应描述 (每行每个维度必须二选一)</th><th>得分</th><th>具体评语描述</th></tr>
+            </thead>
+            <tbody id="reviewBody"></tbody>
+        </table>
+    </div>
+
+    <!-- 自动评分 + 学员导入切换区域（位于表格下方、评语上方） -->
+    <div class="score-student-panel">
+        <!-- 总分 + 等级 第一行 -->
+        <div class="score-row">
+            <div class="score-group">
+                <div class="total-score-card">
+                    <span>总分</span> <span id="totalScoreCompact">0</span>
+                </div>
+                <div class="grade-badge" id="gradeBadgeCompact">—</div>
+            </div>
+            <button class="btn-reset-full" id="resetBtn">⟳ 重置全部选项</button>
+        </div>
+
+        <!-- 学员信息 + 导入/切换 第二行 -->
+        <div class="student-section">
+            <div class="student-info-card" id="studentInfoCard">
+                <div class="student-field"><span class="label">学员序号：</span><span class="value" id="displaySerial">—</span></div>
+                <div class="student-field"><span class="label">班期：</span><span class="value" id="displayBatch">—</span></div>
+                <div class="student-field"><span class="label">姓名：</span><span class="value" id="displayName">—</span></div>
+            </div>
+            <div class="student-selector" id="studentSelectorArea" style="display: none;">
+                <label>📋 切换学员：</label>
+                <select id="studentSerialSelect"></select>
+            </div>
+            <div class="upload-control">
+                <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display:none;" />
+                <button class="upload-btn" id="uploadBtn">📂 导入名单</button>
+                <button class="clear-student" id="clearStudentBtn">清除</button>
+                <span class="file-name" id="fileNameSpan"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 综合评语区域 -->
+    <div class="comments-box">
+        <div class="comments-title">📑 综合评语（逐项评审意见）</div>
+        <div id="commentsList" class="comments-list"></div>
+    </div>
+    <footer>评分说明：总分≥85为优秀，60~84为合格，＜60为不合格。导入Excel需包含“学员序号”、“班期”、“姓名”三列，支持下拉切换学员。</footer>
+</div>
+
+<script>
+    // ========================= 评审核心逻辑（10项完全按照Sheet1标准） =========================
+    function getScoreAndComment_Enterprise(d,f){ if(d&&f) return {s:5,c:"企业概况内容填写详细，完整"}; if(!d&&f) return {s:4,c:"企业概况内容填写不详细，完整"}; if(d&&!f) return {s:3,c:"企业概况内容填写详细，不完整"}; return {s:2,c:"企业概况内容填写不详细，不完整"}; }
+    function getScoreAndComment_Personal(d,f){ if(d&&f) return {s:5,c:"创业者个人情况内容填写详细，完整"}; if(!d&&f) return {s:4,c:"创业者个人情况内容填写不详细，完整"}; if(d&&!f) return {s:3,c:"创业者个人情况内容填写详细，不完整"}; return {s:2,c:"创业者个人情况内容填写不详细，不完整"}; }
+    function getScoreAndComment_Market(a,r){ if(a&&r) return {s:5,c:"市场分析判断准确，合理"}; if(!a&&r) return {s:4,c:"市场分析判断不准确，合理"}; if(a&&!r) return {s:3,c:"市场分析判断准确，不合理"}; return {s:2,c:"市场分析判断不准确，不合理"}; }
+    function getScoreAndComment_Marketing(d,c,r){ if(d&&c&&r) return {s:10,c:"营销计划填写详细，完整，合理"}; if(!d&&c&&r) return {s:9.5,c:"营销计划填写不详细，完整，合理"}; if(d&&!c&&r) return {s:9,c:"营销计划填写详细，不完整，合理"}; if(d&&c&&!r) return {s:8.5,c:"营销计划填写详细，完整，不合理"}; if(!d&&!c&&r) return {s:8,c:"营销计划填写不详细，不完整，合理"}; if(d&&!c&&!r) return {s:7,c:"营销计划填写详细，不完整，不合理"}; if(!d&&c&&!r) return {s:6,c:"营销计划填写不详细，完整，不合理"}; return {s:5,c:"营销计划填写不详细，不完整，不合理"}; }
+    function getScoreAndComment_Org(c,r,p){ if(c&&r&&p) return {s:5,c:"组织架构完整，合理，符合实际需求"}; if(!c&&r&&p) return {s:4.7,c:"组织架构不完整，合理，符合实际需求"}; if(c&&!r&&p) return {s:4.4,c:"组织架构完整，不合理，符合实际需求"}; if(c&&r&&!p) return {s:4.1,c:"组织架构完整，合理，不符合实际需求"}; if(!c&&!r&&p) return {s:4,c:"组织架构不完整，不合理，符合实际需求"}; if(c&&!r&&!p) return {s:3.5,c:"组织架构完整，不合理，不符合实际需求"}; if(!c&&r&&!p) return {s:3,c:"组织架构不完整，合理，不符合实际需求"}; return {s:2,c:"组织架构不完整，不合理，不符合实际需求"}; }
+    function getScoreAndComment_Invest(r,c,a){ if(r&&c&&a) return {s:10,c:"投资预测合理，完整，填写与计算准确"}; if(!r&&c&&a) return {s:9.5,c:"投资预测不合理，完整，填写与计算准确"}; if(r&&!c&&a) return {s:9,c:"投资预测合理，不完整，填写与计算准确"}; if(r&&c&&!a) return {s:8.5,c:"投资预测合理，完整，填写与计算不准确"}; if(!r&&!c&&a) return {s:8,c:"投资预测不合理，不完整，填写与计算准确"}; if(r&&!c&&!a) return {s:7,c:"投资预测合理，不完整，填写与计算不准确"}; if(!r&&c&&!a) return {s:6,c:"投资预测不合理，完整，填写与计算不准确"}; return {s:5,c:"投资预测不合理，不完整，填写与计算不准确"}; }
+    function getScoreAndComment_Liquidity(r,c,a){ if(r&&c&&a) return {s:10,c:"流动资金预测合理，完整，填写与计算准确"}; if(!r&&c&&a) return {s:9.5,c:"流动资金预测不合理，完整，填写与计算准确"}; if(r&&!c&&a) return {s:9,c:"流动资金预测合理，不完整，填写与计算准确"}; if(r&&c&&!a) return {s:8.5,c:"流动资金预测合理，完整，填写与计算不准确"}; if(!r&&!c&&a) return {s:8,c:"流动资金预测不合理，不完整，填写与计算准确"}; if(r&&!c&&!a) return {s:7,c:"流动资金预测合理，不完整，填写与计算不准确"}; if(!r&&c&&!a) return {s:6,c:"流动资金预测不合理，完整，填写与计算不准确"}; return {s:5,c:"流动资金预测不合理，不完整，填写与计算不准确"}; }
+    function getScoreAndComment_Revenue(r,c,a){ if(r&&c&&a) return {s:10,c:"收入预测合理，完整，填写与计算准确"}; if(!r&&c&&a) return {s:9.5,c:"收入预测不合理，完整，填写与计算准确"}; if(r&&!c&&a) return {s:9,c:"收入预测合理，不完整，填写与计算准确"}; if(r&&c&&!a) return {s:8.5,c:"收入预测合理，完整，填写与计算不准确"}; if(!r&&!c&&a) return {s:8,c:"收入预测不合理，不完整，填写与计算准确"}; if(r&&!c&&!a) return {s:7,c:"收入预测合理，不完整，填写与计算不准确"}; if(!r&&c&&!a) return {s:6,c:"收入预测不合理，完整，填写与计算不准确"}; return {s:5,c:"收入预测不合理，不完整，填写与计算不准确"}; }
+    function getScoreAndComment_Profit(r,c,a){ if(r&&c&&a) return {s:20,c:"利润预测合理，完整，填写与计算准确"}; if(!r&&c&&a) return {s:19.5,c:"利润预测不合理，完整，填写与计算准确"}; if(r&&!c&&a) return {s:18,c:"利润预测合理，不完整，填写与计算准确"}; if(r&&c&&!a) return {s:16.5,c:"利润预测合理，完整，填写与计算不准确"}; if(!r&&!c&&a) return {s:16,c:"利润预测不合理，不完整，填写与计算准确"}; if(r&&!c&&!a) return {s:14,c:"利润预测合理，不完整，填写与计算不准确"}; if(!r&&c&&!a) return {s:12,c:"利润预测不合理，完整，填写与计算不准确"}; return {s:11,c:"利润预测不合理，不完整，填写与计算不准确"}; }
+    function getScoreAndComment_Cash(r,c,a){ if(r&&c&&a) return {s:20,c:"现金流预测合理，完整，填写与计算准确"}; if(!r&&c&&a) return {s:19.5,c:"现金流预测不合理，完整，填写与计算准确"}; if(r&&!c&&a) return {s:18,c:"现金流预测合理，不完整，填写与计算准确"}; if(r&&c&&!a) return {s:16.5,c:"现金流预测合理，完整，填写与计算不准确"}; if(!r&&!c&&a) return {s:16,c:"现金流预测不合理，不完整，填写与计算准确"}; if(r&&!c&&!a) return {s:14,c:"现金流预测合理，不完整，填写与计算不准确"}; if(!r&&c&&!a) return {s:12,c:"现金流预测不合理，完整，填写与计算不准确"}; return {s:11,c:"现金流预测不合理，不完整，填写与计算不准确"}; }
+
+    const itemsMeta = [
+        { id:0, name:"企业概况", fields:["detail","complete"], handler:getScoreAndComment_Enterprise, labels: { detail:["详细","不详细"], complete:["完整","不完整"] } },
+        { id:1, name:"创业者个人情况", fields:["detail","complete"], handler:getScoreAndComment_Personal, labels: { detail:["详细","不详细"], complete:["完整","不完整"] } },
+        { id:2, name:"市场评估", fields:["accurate","reasonable"], handler:getScoreAndComment_Market, labels: { accurate:["准确","不准确"], reasonable:["合理","不合理"] } },
+        { id:3, name:"市场营销计划", fields:["detail","complete","reasonable"], handler:getScoreAndComment_Marketing, labels: { detail:["详细","不详细"], complete:["完整","不完整"], reasonable:["合理","不合理"] } },
+        { id:4, name:"企业组织结构", fields:["complete","reasonable","practical"], handler:getScoreAndComment_Org, labels: { complete:["完整","不完整"], reasonable:["合理","不合理"], practical:["符合实际需求","不符合实际需求"] } },
+        { id:5, name:"投资", fields:["reasonable","complete","accurate"], handler:getScoreAndComment_Invest, labels: { reasonable:["合理","不合理"], complete:["完整","不完整"], accurate:["准确","不准确"] } },
+        { id:6, name:"流动资金（月）", fields:["reasonable","complete","accurate"], handler:getScoreAndComment_Liquidity, labels: { reasonable:["合理","不合理"], complete:["完整","不完整"], accurate:["准确","不准确"] } },
+        { id:7, name:"销售收入预测", fields:["reasonable","complete","accurate"], handler:getScoreAndComment_Revenue, labels: { reasonable:["合理","不合理"], complete:["完整","不完整"], accurate:["准确","不准确"] } },
+        { id:8, name:"销售与成本计划", fields:["reasonable","complete","accurate"], handler:getScoreAndComment_Profit, labels: { reasonable:["合理","不合理"], complete:["完整","不完整"], accurate:["准确","不准确"] } },
+        { id:9, name:"现金流量计划", fields:["reasonable","complete","accurate"], handler:getScoreAndComment_Cash, labels: { reasonable:["合理","不合理"], complete:["完整","不完整"], accurate:["准确","不准确"] } }
+    ];
+
+    let state = [], scores = new Array(10).fill(0), commentsArr = new Array(10).fill("");
+    function initState() { state = itemsMeta.map(meta => { let obj = {}; meta.fields.forEach(f => obj[f] = true); return obj; }); }
+    function updateItemScore(idx) { const m = itemsMeta[idx], cur = state[idx]; const args = m.fields.map(f => cur[f]); const res = m.handler(...args); scores[idx] = res.s; commentsArr[idx] = res.c; }
+    function fullRefresh() { for(let i=0;i<10;i++) updateItemScore(i); renderAll(); }
+
+    function renderAll() {
+        const tbody = document.getElementById('reviewBody');
+        tbody.innerHTML = '';
+        for (let i=0;i<itemsMeta.length;i++) {
+            const m = itemsMeta[i], cur = state[i];
+            const tr = document.createElement('tr');
+            tr.appendChild(cell('td', (i+1).toString(), 'col-seq'));
+            tr.appendChild(cell('td', m.name, 'col-name'));
+            const optTd = document.createElement('td'); optTd.className = 'options-cell';
+            const group = document.createElement('div'); group.className = 'option-group';
+            m.fields.forEach(f => {
+                const [posLbl, negLbl] = m.labels[f];
+                const rowDiv = document.createElement('div'); rowDiv.className = 'option-row';
+                const posDiv = createOptionItem(f, true, cur[f] === true, i, `row_${i}_${f}`);
+                const negDiv = createOptionItem(f, false, cur[f] === false, i, `row_${i}_${f}`);
+                rowDiv.appendChild(posDiv); rowDiv.appendChild(negDiv);
+                group.appendChild(rowDiv);
+            });
+            optTd.appendChild(group);
+            tr.appendChild(optTd);
+            tr.appendChild(cell('td', scores[i].toFixed(1), 'score-cell'));
+            tr.appendChild(cell('td', commentsArr[i], 'comment-cell'));
+            tbody.appendChild(tr);
+        }
+        const total = scores.reduce((a,b)=>a+b,0);
+        document.getElementById('totalScoreCompact').innerText = total.toFixed(1);
+        const gradeEl = document.getElementById('gradeBadgeCompact');
+        let gradeText = "", gradeClass = "";
+        if(total >= 85) { gradeText = "优秀 ★"; gradeClass = "grade-excellent"; }
+        else if(total >= 60) { gradeText = "合格 ✓"; gradeClass = "grade-qualified"; }
+        else { gradeText = "不合格 ✗"; gradeClass = "grade-fail"; }
+        gradeEl.innerText = gradeText;
+        gradeEl.className = `grade-badge ${gradeClass}`;
+        document.getElementById('commentsList').innerHTML = itemsMeta.map((m,idx) => `<div class="comment-item"><strong>${idx+1}. ${m.name}</strong>：${commentsArr[idx]}</div>`).join('');
+    }
+
+    function createOptionItem(field, boolVal, isChecked, rowIdx, namePrefix) {
+        const labelText = boolVal ? (itemsMeta[rowIdx].labels[field][0]) : (itemsMeta[rowIdx].labels[field][1]);
+        const wrapper = document.createElement('div');
+        wrapper.className = `option-item ${isChecked ? 'selected' : ''}`;
+        const radio = document.createElement('input');
+        radio.type = 'radio'; radio.name = namePrefix; radio.value = boolVal ? 'true' : 'false';
+        radio.checked = isChecked;
+        radio.addEventListener('change', (e) => {
+            if(e.target.checked) {
+                state[rowIdx][field] = boolVal;
+                updateItemScore(rowIdx);
+                fullRefresh();
+            }
+        });
+        const lbl = document.createElement('label'); lbl.innerText = labelText;
+        wrapper.appendChild(radio); wrapper.appendChild(lbl);
+        return wrapper;
+    }
+    function cell(tag, txt, className) { const td = document.createElement(tag); td.innerText = txt; if(className) td.className = className; return td; }
+
+    // ======================== 学员名单管理 ========================
+    let studentList = [];
+    let currentStudentIdx = -1;
+
+    function updateStudentUI() {
+        const serialSpan = document.getElementById('displaySerial');
+        const batchSpan = document.getElementById('displayBatch');
+        const nameSpan = document.getElementById('displayName');
+        const selectorDiv = document.getElementById('studentSelectorArea');
+        const selectEl = document.getElementById('studentSerialSelect');
+        if (studentList.length === 0) {
+            serialSpan.innerText = '—'; batchSpan.innerText = '—'; nameSpan.innerText = '—';
+            selectorDiv.style.display = 'none';
+            return;
+        }
+        if (currentStudentIdx >= 0 && currentStudentIdx < studentList.length) {
+            const stu = studentList[currentStudentIdx];
+            serialSpan.innerText = stu.serial || '—';
+            batchSpan.innerText = stu.batch || '—';
+            nameSpan.innerText = stu.name || '—';
+        } else {
+            serialSpan.innerText = '—'; batchSpan.innerText = '—'; nameSpan.innerText = '—';
+        }
+        selectEl.innerHTML = '';
+        studentList.forEach((stu, idx) => {
+            const option = document.createElement('option');
+            option.value = idx;
+            option.innerText = `${stu.serial || '序号'} - ${stu.name || '无名'}`;
+            if (idx === currentStudentIdx) option.selected = true;
+            selectEl.appendChild(option);
+        });
+        selectorDiv.style.display = 'flex';
+    }
+
+    function handleExcelUpload(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+            if (!rows || rows.length < 2) { alert("Excel至少包含表头+数据行"); return; }
+            const headers = rows[0].map(h => String(h).trim());
+            let serialIdx = -1, batchIdx = -1, nameIdx = -1;
+            for (let i=0; i<headers.length; i++) {
+                if (headers[i].includes("学员序号")) serialIdx = i;
+                else if (headers[i].includes("班期")) batchIdx = i;
+                else if (headers[i].includes("姓名")) nameIdx = i;
+            }
+            if (serialIdx === -1 || batchIdx === -1 || nameIdx === -1) {
+                alert("Excel表头必须包含「学员序号」「班期」「姓名」三列");
+                return;
+            }
+            const newList = [];
+            for (let i=1; i<rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+                const serialVal = row[serialIdx] ? String(row[serialIdx]).trim() : "";
+                const batchVal = row[batchIdx] ? String(row[batchIdx]).trim() : "";
+                const nameVal = row[nameIdx] ? String(row[nameIdx]).trim() : "";
+                if (serialVal === "" && batchVal === "" && nameVal === "") continue;
+                newList.push({ serial: serialVal || "—", batch: batchVal || "—", name: nameVal || "—" });
+            }
+            if (newList.length === 0) { alert("未找到有效学员数据"); return; }
+            studentList = newList;
+            currentStudentIdx = 0;
+            updateStudentUI();
+            document.getElementById('fileNameSpan').innerText = file.name;
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function clearStudent() {
+        studentList = [];
+        currentStudentIdx = -1;
+        updateStudentUI();
+        document.getElementById('fileNameSpan').innerText = '';
+    }
+
+    function bindSelectEvent() {
+        const selectEl = document.getElementById('studentSerialSelect');
+        if (selectEl) {
+            selectEl.addEventListener('change', (e) => {
+                const newIdx = parseInt(e.target.value, 10);
+                if (!isNaN(newIdx) && newIdx >= 0 && newIdx < studentList.length) {
+                    currentStudentIdx = newIdx;
+                    updateStudentUI();
+                }
+            });
+        }
+    }
+
+    // 重置评审选项
+    document.getElementById('resetBtn').addEventListener('click', () => { initState(); fullRefresh(); });
+    const uploadInput = document.getElementById('excelUpload');
+    document.getElementById('uploadBtn').addEventListener('click', () => uploadInput.click());
+    uploadInput.addEventListener('change', (e) => { if(e.target.files.length) handleExcelUpload(e.target.files[0]); uploadInput.value = ''; });
+    document.getElementById('clearStudentBtn').addEventListener('click', () => clearStudent());
+    
+    initState();
+    fullRefresh();
+    bindSelectEvent();
+    document.getElementById('studentSelectorArea').style.display = 'none';
+</script>
+</body>
+</html>
